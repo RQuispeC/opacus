@@ -40,6 +40,8 @@ from torch import nn
 from .utils.clipping import NormClipper
 from .utils.tensor_utils import calc_sample_norms
 
+import logging
+logger = logging.getLogger(__name__)
 
 class PerSampleGradientClipper:
     r"""
@@ -155,6 +157,8 @@ class PerSampleGradientClipper:
         will populate the ``.grad`` field with the average gradient over the entire batch of size
         ``(N-1)* B + b`` with ``b <= B``.
         """
+        if len([name for name, _ in self._named_grad_samples()]) == 0:
+            return
         # step 0 : calculate the layer norms
         all_norms = calc_sample_norms(
             named_params=self._named_grad_samples(),
@@ -224,7 +228,7 @@ class PerSampleGradientClipper:
         Returns:
             Iterator over parameters with their names
         """
-        return ((n, p) for n, p in self.module.named_parameters() if p.requires_grad)
+        return ((n, p) for n, p in self.module.named_parameters() if p.requires_grad and hasattr(p, "grad_sample"))
 
     def _named_grad_samples(self) -> Iterator[Tuple[str, torch.Tensor]]:
         r"""
@@ -241,14 +245,18 @@ class PerSampleGradientClipper:
             if p.requires_grad and not hasattr(p, "grad_sample")
         ]
         if len(no_grad_samples) >= 1:
+            """
             raise AttributeError(
                 f"The following layers do not have gradients: {no_grad_samples}. Are you sure they were included in the backward pass?"
             )
+            """
+            #logger.info(f"The following layers do not have gradients: {no_grad_samples}. Are you sure they were included in the backward pass?")
+            pass
 
         return (
             (n, p.grad_sample)
             for n, p in self.module.named_parameters()
-            if p.requires_grad
+            if p.requires_grad and hasattr(p, "grad_sample")
         )
 
     def _scale_summed_grad(

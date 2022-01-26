@@ -270,6 +270,8 @@ class ConstantPerLayerClipper(NormClipper):
                 value before clipping.
         """
         self.flat_values = [float(fv) for fv in flat_values]
+        self.flat_value_0 = self.flat_values[0]
+        self.is_first_call = True
 
     def calc_clipping_factors(self, norms: List[torch.Tensor]) -> List[torch.Tensor]:
         """
@@ -286,6 +288,10 @@ class ConstantPerLayerClipper(NormClipper):
             List of tensors, each containing a single value specifying the
             clipping factor per layer.
         """
+
+        if self.is_first_call: #hack to avoid bellow error exception
+            self.is_first_call = False
+            self.flat_values = [self.flat_value_0] * len(norms) 
         if len(norms) != len(self.flat_values) and len(self.flat_values) != 1:
             raise ValueError(
                 f"{len(norms)} layers have provided norms but the "

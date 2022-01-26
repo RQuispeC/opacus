@@ -26,6 +26,8 @@ from .utils import clipping
 
 DEFAULT_ALPHAS = [1 + x / 10.0 for x in range(1, 100)] + list(range(12, 64))
 
+import logging
+logger = logging.getLogger(__name__)
 
 def get_noise_multiplier(
     target_epsilon: float,
